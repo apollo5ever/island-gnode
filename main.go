@@ -960,7 +960,7 @@ func GetIsland(scid string) Island {
 				fmt.Println("Key is not a string")
 			}
 		}
-		var Bounties []Bounty
+		var Bounties = []Bounty{}
 
 		for i := 0; ; i++ {
 			fmt.Println(i)
