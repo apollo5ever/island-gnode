@@ -1021,10 +1021,16 @@ func GetIsland(scid string) Island {
 }
 
 func MapValuesToSlice(m map[int]string) []string {
-	values := make([]string, 0, len(m))
-	for _, value := range m {
-		values = append(values, value)
+	keys := make([]int, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
 	}
+
+	values := make([]string, 0, len(m))
+	for _, k := range keys {
+		values = append(values, m[k])
+	}
+
 	return values
 }
 
