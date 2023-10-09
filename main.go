@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"regexp"
@@ -17,8 +19,12 @@ import (
 	"github.com/civilware/Gnomon/structures"
 	"github.com/dReam-dApps/dReams/menu"
 	"github.com/dReam-dApps/dReams/rpc"
+	"github.com/deroproject/derohe/cryptography/crypto"
+	dero "github.com/deroproject/derohe/rpc"
 	"github.com/sirupsen/logrus"
 )
+
+var devMode bool
 
 type Bounty struct {
 	Name         map[int]string
@@ -112,10 +118,11 @@ type Island struct {
 const app_tag = "island_gnode"
 
 // contracts
-const registry_scid = "a5daa9a02a81a762c83f3d4ce4592310140586badb4e988431819f47657559f7"
-const bounties_scid = "fc2a6923124a07f33c859f201a57159663f087e2f4b163eaa55b0f09bf6de89f"
-const fundraisers_scid = "d6ad66e39c99520d4ed42defa4643da2d99f297a506d3ddb6c2aaefbe011f3dc"
-const subscriptions_scid = "a4943b10767d3b4b28a0c39fe75303b593b2a8609b07394c803fca1a877716cc"
+var registry_scid = "a5daa9a02a81a762c83f3d4ce4592310140586badb4e988431819f47657559f7"
+
+var bounties_scid = "fc2a6923124a07f33c859f201a57159663f087e2f4b163eaa55b0f09bf6de89f"
+var fundraisers_scid = "d6ad66e39c99520d4ed42defa4643da2d99f297a506d3ddb6c2aaefbe011f3dc"
+var subscriptions_scid = "a4943b10767d3b4b28a0c39fe75303b593b2a8609b07394c803fca1a877716cc"
 
 // Log output
 var logger = structures.Logger.WithFields(logrus.Fields{})
@@ -123,6 +130,9 @@ var logger = structures.Logger.WithFields(logrus.Fields{})
 var islands []Island
 
 func main() {
+
+	flag.BoolVar(&devMode, "dev", false, "Run in dev mode")
+	flag.Parse()
 	// create a new Gorilla Mux router
 	router := mux.NewRouter()
 
@@ -132,10 +142,16 @@ func main() {
 	router.HandleFunc("/api/islands/{id}", getIsland).Methods("GET")
 
 	// Initialize Gnomon fast sync
-	menu.Gnomes.Fast = true
 
 	// Initialize rpc address to rpc.Daemon var
-	rpc.Daemon.Rpc = "147.182.177.142:9999"
+	if devMode {
+		rpc.Daemon.Rpc = "127.0.0.1:20000"
+		menu.Gnomes.Fast = false
+
+	} else {
+		rpc.Daemon.Rpc = "147.182.177.142:9999"
+		menu.Gnomes.Fast = true
+	}
 
 	// Initialize logger to Stdout
 	menu.InitLogrusLog(runtime.GOOS == "windows")
@@ -143,9 +159,54 @@ func main() {
 	rpc.Ping()
 	// Check for daemon connection, if daemon is not connected we won't start Gnomon
 	if rpc.Daemon.Connect {
+		if devMode {
+			rpc.SetDaemonClient("http://127.0.0.1:20000")
+			rpc.SetWalletClient("http://127.0.0.1:30000", ":")
+			bountiesSimBytes, err := ioutil.ReadFile("bounties_sim.txt")
+			if err != nil {
+				log.Fatal(err)
+			}
+			bountiesCode := string(bountiesSimBytes)
+			time.Sleep(30 * time.Second)
+			bounties_scid = InstallContract(bountiesCode, "0")
+
+			registrySimBytes, err := ioutil.ReadFile("registry_sim.txt")
+			if err != nil {
+				log.Fatal(err)
+			}
+			registryCode := string(registrySimBytes)
+			time.Sleep(30 * time.Second)
+			registry_scid = InstallContract(registryCode, "0")
+
+			fundraisersSimBytes, err := ioutil.ReadFile("fundraisers_sim.txt")
+			if err != nil {
+				log.Fatal(err)
+			}
+			fundraisersCode := string(fundraisersSimBytes)
+			time.Sleep(30 * time.Second)
+			fundraisers_scid = InstallContract(fundraisersCode, "0")
+
+			subscriptionsSimBytes, err := ioutil.ReadFile("subscriptions_sim.txt")
+			if err != nil {
+				log.Fatal(err)
+			}
+			subscriptionsCode := string(subscriptionsSimBytes)
+			time.Sleep(30 * time.Second)
+			subscriptions_scid = InstallContract(subscriptionsCode, "0")
+
+			fmt.Println("bounty contract", bounties_scid)
+			fmt.Println("registry contract", registry_scid)
+			fmt.Println("fundraisers contract", fundraisers_scid)
+			fmt.Println("subscriptions contract", subscriptions_scid)
+			InstallIsland("apollo", "3")
+			InstallIsland("Isle of Wight", "1")
+			InstallIsland("Azylem", "2")
+		}
+
 		// Initialize NFA search filter and start Gnomon
 		filter := []string{"Function Approve(seat Uint64) Uint64", "Function SetTagline(Tagline String) Uint64"}
 		menu.StartGnomon(app_tag, "boltdb", filter, 0, 0, nil)
+
 		//var Island = GetIsland("cf530bd98d200171a94bcd6ef1e3ad6348bfa3e6691196e64e93e7953b64a2e4")
 		//fmt.Println("main island call", Island)
 		//GetAllVars()
@@ -943,23 +1004,34 @@ func GetIsland(scid string) Island {
 			return Island{}
 		}
 		var Island Island = Island{}
-		for _, h := range info[int64(keys[len(keys)-1])] {
-			if keyStr, ok := h.Key.(string); ok {
-				switch keyStr {
-				case "bio":
-					Island.Description = h.Value.(string)
-				case "image":
-					Island.Image = h.Value.(string)
-				case "name":
-					Island.Name = h.Value.(string)
-				case "tagline":
-					Island.Tagline = h.Value.(string)
 
-				}
-			} else {
-				fmt.Println("Key is not a string")
-			}
+		Image, err := menu.Gnomes.GetSCIDValuesByKey(scid, "image")
+		if err != nil {
+			// Handle the error if there is an issue retrieving the values
+			log.Fatal(err)
 		}
+		if len(Image) > 0 {
+			Island.Image = Image[0]
+		}
+
+		Description, err := menu.Gnomes.GetSCIDValuesByKey(scid, "bio")
+		if err != nil {
+			// Handle the error if there is an issue retrieving the values
+			log.Fatal(err)
+		}
+		if len(Description) > 0 {
+			Island.Description = Description[0]
+		}
+
+		Tagline, err := menu.Gnomes.GetSCIDValuesByKey(scid, "tagline")
+		if err != nil {
+			// Handle the error if there is an issue retrieving the values
+			log.Fatal(err)
+		}
+		if len(Tagline) > 0 {
+			Island.Tagline = Tagline[0]
+		}
+		Island.Name = getName(scid).Name
 		var Bounties = []Bounty{}
 
 		for i := 0; ; i++ {
@@ -1047,3 +1119,81 @@ func MapValuesToSlice(m map[int]string) []string {
 //func getFundraiser(scid, index)
 
 //func getTier(scid, index)
+
+func InstallContract(code string, wallet string) (new_scid string) {
+
+	rpcClientW, ctx, cancel := rpc.SetWalletClient("localhost:3000"+wallet, "")
+	defer cancel()
+
+	args := dero.Arguments{}
+	txid := dero.Transfer_Result{}
+
+	params := &dero.Transfer_Params{
+		Transfers: []dero.Transfer{},
+		SC_Code:   code,
+		SC_Value:  0,
+		SC_RPC:    args,
+		Ringsize:  2,
+	}
+
+	if err := rpcClientW.CallFor(ctx, &txid, "transfer", params); err != nil {
+		logger.Errorln("[UploadTokenContract]", err)
+		return ""
+	}
+
+	logger.Println("InstallContract] Upload TX:", txid)
+	rpc.AddLog("Install Contract TX: " + txid.TXID)
+
+	return txid.TXID
+
+}
+
+func InstallIsland(name string, wallet string) (new_scid string) {
+	islandBytes, err := ioutil.ReadFile("island.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	islandCode := string(islandBytes)
+
+	scid := InstallContract(islandCode, wallet)
+	time.Sleep(30 * time.Second)
+	RegisterIsland(scid, name, wallet)
+	fmt.Println(name, scid)
+
+	return scid
+
+}
+
+func RegisterIsland(scid string, name string, wallet string) {
+	rpcClientW, ctx, cancel := rpc.SetWalletClient("localhost:3000"+wallet, "")
+	defer cancel()
+
+	arg1 := dero.Argument{Name: "entrypoint", DataType: "S", Value: "RegisterAsset"}
+	arg2 := dero.Argument{Name: "scid", DataType: "S", Value: scid}
+	arg3 := dero.Argument{Name: "name", DataType: "S", Value: name}
+	arg4 := dero.Argument{Name: "collection", DataType: "S", Value: "PRIVATE-ISLANDS"}
+	args := dero.Arguments{arg1, arg2, arg3, arg4}
+	txid := dero.Transfer_Result{}
+
+	t1 := dero.Transfer{
+		SCID:   crypto.HashHexToHash(scid),
+		Amount: 0,
+		Burn:   1,
+	}
+
+	t := []dero.Transfer{t1}
+	fee := rpc.GasEstimate(registry_scid, "[Register]", args, t, rpc.LowLimitFee)
+	params := &dero.Transfer_Params{
+		Transfers: t,
+		SC_ID:     registry_scid,
+		SC_RPC:    args,
+		Ringsize:  2,
+		Fees:      fee,
+	}
+
+	if err := rpcClientW.CallFor(ctx, &txid, "transfer", params); err != nil {
+		logger.Errorln("[RegisterIsland]", err)
+		return
+	}
+
+}

@@ -1,0 +1,65 @@
+Function InitializePrivate() Uint64
+10 IF EXISTS("name") THEN GOTO 100
+20 STORE("name","name")
+30 SEND_ASSET_TO_ADDRESS(SIGNER(),1,SCID())
+40 STORE("owner","")
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function SetImage(Image String) Uint64
+10 IF ADDRESS_STRING(SIGNER()) != LOAD("owner") && ASSETVALUE(SCID()) != 1 THEN GOTO 100
+20 STORE("image",Image)
+30 SEND_ASSET_TO_ADDRESS(SIGNER(),ASSETVALUE(SCID()),SCID())
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function SetTagline(Tagline String) Uint64
+10 IF ADDRESS_STRING(SIGNER()) != LOAD("owner") && ASSETVALUE(SCID()) != 1 THEN GOTO 100
+20 STORE("tagline",Tagline)
+40 SEND_ASSET_TO_ADDRESS(SIGNER(),ASSETVALUE(SCID()),SCID())
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function SetBio(Bio String) Uint64
+10 IF ADDRESS_STRING(SIGNER()) != LOAD("owner") && ASSETVALUE(SCID()) != 1 THEN GOTO 100
+20 STORE("bio",Bio)
+40 SEND_ASSET_TO_ADDRESS(SIGNER(),ASSETVALUE(SCID()),SCID())
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function SetMetadata(Image String, Tagline String, Bio String) Uint64
+10 IF ADDRESS_STRING(SIGNER()) != LOAD("owner") && ASSETVALUE(SCID()) != 1 THEN GOTO 100
+20 STORE("image",Image)
+30 STORE("tagline",Tagline)
+40 STORE("bio",Bio)
+50 SEND_ASSET_TO_ADDRESS(SIGNER(),ASSETVALUE(SCID()),SCID())
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function SetIPFS(cid String) Uint64
+10 IF ADDRESS_STRING(SIGNER()) != LOAD("owner") && ASSETVALUE(SCID()) != 1 THEN GOTO 100
+20 STORE("ipfs",cid)
+50 SEND_ASSET_TO_ADDRESS(SIGNER(),ASSETVALUE(SCID()),SCID())
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function Display() Uint64
+10 IF ASSETVALUE(SCID()) != 1 THEN GOTO 100
+20 STORE("owner",ADDRESS_STRING(SIGNER()))
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function Retrieve() Uint64
+10 IF SIGNER() != ADDRESS_RAW(LOAD("owner")) THEN GOTO 100
+20 SEND_ASSET_TO_ADDRESS(SIGNER(),1,SCID())
+30 STORE("owner","")
+99 RETURN 0
+100 RETURN 1
+End Function
