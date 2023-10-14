@@ -27,34 +27,40 @@ import (
 var devMode bool
 
 type Bounty struct {
-	Name         map[int]string
-	Names        []string
-	Image        map[int]string
-	Images       []string
-	Description  map[int]string
-	Descriptions []string
-	Tagline      map[int]string
-	Taglines     []string
-	Expiry       time.Time
-	Amount       float64
-	JudgeList    map[int]string
-	Judges       []Name
-	JN           float64
-	Judge        Name
-	JT           float64
-	JE           float64
-	ExecList     map[int]string
-	Execs        []Name
-	XN           float64
-	X            string
-	XT           float64
-	XE           float64
-	SCID         string
-	Index        int
-	Status       int
-	JF           int
-	Initiator    Name
+	Name          string
+	Image         string
+	Description   string
+	Tagline       string
+	Expiry        uint64
+	Amount        uint64
+	Judges        []Judge
+	JN            float64
+	Judge         Name
+	Executer      Name
+	JT            float64
+	JE            float64
+	Execs         []Judge
+	XN            float64
+	X             string
+	XT            float64
+	XE            float64
+	SCID          string
+	Index         uint64
+	Status        uint64
+	JF            float64
+	Initiator     Name
+	RecipientList []Recipient
 	// Add other attributes as needed
+}
+type Recipient struct {
+	Address string
+	Weight  uint64
+}
+
+type Judge struct {
+	Name  string
+	SCID  string
+	Index int
 }
 
 type Fundraiser struct {
@@ -106,10 +112,17 @@ type Island struct {
 	Image       string
 	Description string
 	Tagline     string
+	History     []History
 	Bounties    []Bounty
 	Fundraisers []Fundraiser
 	Tiers       []Tier
 	Judging     []Bounty
+}
+
+type History struct {
+	Height    int
+	Attribute string
+	Value     string
 }
 
 // dReams menu StartGnomon() example
@@ -140,6 +153,7 @@ func main() {
 	//router.HandleFunc("/", getAllIslands).Methods("GET")
 	router.HandleFunc("/api/islands", getAllIslands).Methods("GET")
 	router.HandleFunc("/api/islands/{id}", getIsland).Methods("GET")
+	router.HandleFunc("/api/contracts", getContracts).Methods("GET")
 
 	// Initialize Gnomon fast sync
 
@@ -518,6 +532,14 @@ func GetFundraiser(scid string, index int) Fundraiser {
 }
 
 func GetBounty(scid string, index int) Bounty {
+	Bounty := Bounty{
+		SCID:          scid,
+		Index:         uint64(index),
+		Initiator:     getName(scid),
+		Judges:        []Judge{},
+		Execs:         []Judge{},
+		RecipientList: []Recipient{},
+	}
 	info := menu.Gnomes.GetAllSCIDVariableDetails(bounties_scid)
 	if info != nil {
 		keys := make([]int, len(info))
@@ -526,61 +548,67 @@ func GetBounty(scid string, index int) Bounty {
 			keys[i] = int(k)
 			i++
 		}
+
 		if len(keys) == 0 {
 			fmt.Println("[GetAllVars] No stored heights")
-			return Bounty{}
+			return Bounty
 		}
+		sort.Ints(keys)
 		key := scid + strconv.Itoa(index)
 		re, err := regexp.Compile(key + ".*")
 		if err != nil {
 			fmt.Println("Invalid regex pattern:", err)
-			return Bounty{}
+			return Bounty
 		}
-		var Bounty Bounty = Bounty{
-			Name:        make(map[int]string),
-			Image:       make(map[int]string),
-			Description: make(map[int]string),
-			Tagline:     make(map[int]string),
-			Amount:      float64(0),
-			JudgeList:   make(map[int]string),
-			JT:          float64(0),
-			ExecList:    make(map[int]string),
-			SCID:        scid,
-			Index:       index,
-			Initiator:   getName(scid),
+		Image, _ := menu.Gnomes.GetSCIDValuesByKey(bounties_scid, scid+strconv.Itoa(index)+"Image")
+
+		if len(Image) > 0 {
+			Bounty.Image = Image[0]
 		}
+
+		Description, _ := menu.Gnomes.GetSCIDValuesByKey(bounties_scid, scid+strconv.Itoa(index)+"Desc")
+
+		if len(Description) > 0 {
+			Bounty.Description = Description[0]
+		}
+
+		Tagline, _ := menu.Gnomes.GetSCIDValuesByKey(bounties_scid, scid+strconv.Itoa(index)+"Tagline")
+
+		if len(Tagline) > 0 {
+			Bounty.Tagline = Tagline[0]
+		}
+		Names, _ := menu.Gnomes.GetSCIDValuesByKey(bounties_scid, scid+strconv.Itoa(index)+"Name")
+		if len(Names) > 0 {
+			Bounty.Name = Names[0]
+		}
+		judge, _ := menu.Gnomes.GetSCIDValuesByKey(bounties_scid, scid+strconv.Itoa(index)+"J")
+		fmt.Println("JUDGE??", judge)
+		if len(judge) > 0 {
+			Bounty.Judge = getName(judge[0])
+		}
+
+		executer, _ := menu.Gnomes.GetSCIDValuesByKey(bounties_scid, scid+strconv.Itoa(index)+"X")
+
+		if len(executer) > 0 {
+			Bounty.Executer = getName(executer[0])
+		}
+
+		_, Expiry := menu.Gnomes.GetSCIDValuesByKey(bounties_scid, scid+strconv.Itoa(index)+"_E")
+		if len(Expiry) > 0 {
+			Bounty.Expiry = Expiry[0]
+		}
+
+		_, Amount := menu.Gnomes.GetSCIDValuesByKey(bounties_scid, scid+strconv.Itoa(index)+"_T")
+		if len(Amount) > 0 {
+			Bounty.Amount = Amount[0]
+		}
+
 		for _, h := range info[int64(keys[len(keys)-1])] {
 			if keyStr, ok := h.Key.(string); ok {
 				if re.MatchString(keyStr) {
 					parts := strings.Split(keyStr, "_")
-					if len(parts) >= 3 {
-						versionNumber, _ := strconv.Atoi(parts[len(parts)-1])
-						switch parts[len(parts)-2] {
-						case "name":
-							Bounty.Name[versionNumber] = h.Value.(string)
-						case "image":
-							Bounty.Image[versionNumber] = h.Value.(string)
-						case "desc":
-							Bounty.Description[versionNumber] = h.Value.(string)
-						case "tagline":
-							Bounty.Tagline[versionNumber] = h.Value.(string)
-						}
-					} else {
+					if len(parts) == 2 {
 						switch parts[1] {
-						case "E":
-							expiryInt, ok := h.Value.(int)
-							if !ok {
-								expiryFloat := h.Value.(float64)
-								expiryInt = int(expiryFloat)
-							}
-							Bounty.Expiry = time.Unix(int64(expiryInt), 0)
-						case "T":
-							amount, err := strconv.ParseFloat(fmt.Sprintf("%v", h.Value), 64)
-							if err != nil {
-								logger.Println("Failed to convert amount to float64", err)
-								continue
-							}
-							Bounty.Amount = amount
 						default:
 							if strings.HasPrefix(parts[len(parts)-1], "J") {
 								fmt.Println("J DETECTED!!!", parts)
@@ -593,72 +621,89 @@ func GetBounty(scid string, index int) Bounty {
 								} else {
 									fmt.Println(judgeIndex)
 									fmt.Println(h.Value.(string))
-									Bounty.JudgeList[judgeIndex] = h.Value.(string)
+									Bounty.Judges = append(Bounty.Judges, getJudge(judgeIndex, h.Value.(string)))
 								}
 								fmt.Println(parts)
 								switch parts[len(parts)-1] {
 								case "JN":
-									JN, err := strconv.ParseFloat(fmt.Sprintf("%v", h.Value), 64)
-									if err != nil {
-										logger.Println("Failed to convert amount to float64", err)
-										continue
-									}
+									JN := h.Value.(float64)
+
 									Bounty.JN = JN
 								case "JE":
-									JE, err := strconv.ParseFloat(fmt.Sprintf("%v", h.Value), 64)
-									if err != nil {
-										logger.Println("Failed to convert amount to float64", err)
-										continue
-									}
+									JE := h.Value.(float64)
+
 									Bounty.JE = JE
 								case "JT":
-									JT, err := strconv.ParseFloat(fmt.Sprintf("%v", h.Value), 64)
-									if err != nil {
-										logger.Println("Failed to convert amount to float64", err)
-										continue
-									}
+									JT := h.Value.(float64)
+
 									Bounty.JT = JT
 								case "JF":
-									Bounty.JF = h.Value.(int)
+									Bounty.JF = h.Value.(float64)
 								case "J":
 									// Process J attribute
 									Bounty.Judge = getName(h.Value.(string))
 								}
 							} else if strings.HasPrefix(parts[len(parts)-1], "X") {
-								fmt.Println("X DETECTED!!!", parts)
-								// Handle XN, XE, XT cases
+
 								xIndexStr := parts[len(parts)-1]
-								fmt.Println("xis", xIndexStr)
+
 								xIndex, err := strconv.Atoi(xIndexStr[1:])
 								if err != nil {
 									fmt.Println("Invalid XList index:", err)
 								} else {
 									fmt.Println(xIndex)
 									fmt.Println(h.Value.(string))
-									Bounty.ExecList[xIndex] = h.Value.(string)
+									Bounty.Execs = append(Bounty.Execs, getJudge(xIndex, h.Value.(string)))
+
 								}
 								fmt.Println(parts)
 								switch parts[len(parts)-1] {
 								case "XN":
-									XN, err := strconv.ParseFloat(fmt.Sprintf("%v", h.Value), 64)
-									if err != nil {
-										logger.Println("Failed to convert amount to float64", err)
-										continue
-									}
+									XN := h.Value.(float64)
+
 									Bounty.XN = XN
 								case "XE":
-									XE, err := strconv.ParseFloat(fmt.Sprintf("%v", h.Value), 64)
-									if err != nil {
-										logger.Println("Failed to convert amount to float64", err)
-										continue
-									}
+									XE := h.Value.(float64)
+
 									Bounty.XE = XE
 								case "XT":
-									XT, err := strconv.ParseFloat(fmt.Sprintf("%v", h.Value), 64)
-									if err != nil {
-										logger.Println("Failed to convert amount to float64", err)
-										continue
+									XT := h.Value.(float64)
+
+									Bounty.XT = XT
+								case "X":
+									// Process X attribute
+									Bounty.X = h.Value.(string)
+								}
+							} else if strings.HasPrefix(parts[len(parts)-1], "R") {
+
+								rIndexStr := parts[len(parts)-1]
+
+								//rIndex, err := strconv.Atoi(rIndexStr[1:])
+								if err != nil {
+									fmt.Println("Invalid XList index:", err)
+								} else {
+									fmt.Println("weight trouble", rIndexStr[1:], scid+strconv.Itoa(index)+"_W"+rIndexStr[1:])
+									_, Weight := menu.Gnomes.GetSCIDValuesByKey(bounties_scid, scid+strconv.Itoa(index)+"_W"+rIndexStr[1:])
+									fmt.Println("Weight: ", Weight)
+									if len(Weight) > 0 {
+										fmt.Println("weight >0 see?", Weight)
+										Bounty.RecipientList = append(Bounty.RecipientList, Recipient{Address: h.Value.(string), Weight: Weight[0]})
 									}
+								}
+
+								fmt.Println(parts)
+								switch parts[len(parts)-1] {
+								case "RN":
+									XN := h.Value.(float64)
+
+									Bounty.XN = XN
+								case "XE":
+									XE := h.Value.(float64)
+
+									Bounty.XE = XE
+								case "XT":
+									XT := h.Value.(float64)
+
 									Bounty.XT = XT
 								case "X":
 									// Process X attribute
@@ -667,33 +712,22 @@ func GetBounty(scid string, index int) Bounty {
 							}
 
 						}
-
 					}
+
 				}
 			} else {
 				fmt.Println("Key is not a string")
 			}
 		}
-		fmt.Println(Bounty.Name)
-		fmt.Println(Bounty.JudgeList)
-		Bounty.Names = MapValuesToSlice(Bounty.Name)
-		Bounty.Images = MapValuesToSlice(Bounty.Image)
-		Bounty.Descriptions = MapValuesToSlice(Bounty.Description)
-		Bounty.Taglines = MapValuesToSlice(Bounty.Tagline)
 
-		var Judges []string = MapValuesToSlice(Bounty.JudgeList)
-		Bounty.Judges = make([]Name, len(Judges))
+		/* var Judges []string = MapValuesToSlice(Bounty.JudgeList)
+		Bounty.Judges = make([]Judge, len(Judges))
 		for k := range Judges {
-			Bounty.Judges[k] = getName(Judges[k])
-		}
+			Bounty.Judges[k].Name = getName(Judges[k])
+			Bounty.Judges[k].Index = k
+		} */
 
-		var Execs []string = MapValuesToSlice(Bounty.ExecList)
-		Bounty.Execs = make([]Name, len(Execs))
-		for k := range Execs {
-			Bounty.Execs[k] = getName(Execs[k])
-		}
-
-		if Bounty.Expiry.Before(time.Now().UTC()) {
+		if time.Unix(int64(Bounty.Expiry), 0).Before(time.Now().UTC()) {
 			// bounty is expired
 			if Bounty.JF == 1 {
 				//expired & released
@@ -713,7 +747,7 @@ func GetBounty(scid string, index int) Bounty {
 		return Bounty
 
 	} else {
-		return Bounty{}
+		return Bounty
 	}
 
 }
@@ -747,13 +781,7 @@ func GetBounties(scid string) {
 			}
 
 			foundMatch := false
-			var currentBounty *Bounty = &Bounty{
-				Name:        make(map[int]string),
-				Image:       make(map[int]string),
-				Description: make(map[int]string),
-				Tagline:     make(map[int]string),
-				Amount:      float64(0),
-			}
+			var currentBounty *Bounty = &Bounty{}
 			for _, h := range info[int64(keys[len(keys)-1])] {
 				if keyStr, ok := h.Key.(string); ok {
 					if re.MatchString(keyStr) {
@@ -762,7 +790,7 @@ func GetBounties(scid string) {
 						// Split the key string using underscore
 						parts := strings.Split(keyStr, "_")
 						if len(parts) >= 3 {
-							versionNumber, _ := strconv.Atoi(parts[len(parts)-1])
+
 							// Create or get the corresponding bounty object
 							/* if currentBounty == nil {
 								logger.Println("creating new bounty", scid, i)
@@ -779,13 +807,13 @@ func GetBounties(scid string) {
 							} */
 							switch parts[len(parts)-2] {
 							case "name":
-								currentBounty.Name[versionNumber] = h.Value.(string)
+								currentBounty.Name = h.Value.(string)
 							case "image":
-								currentBounty.Image[versionNumber] = h.Value.(string)
+								currentBounty.Image = h.Value.(string)
 							case "desc":
-								currentBounty.Description[versionNumber] = h.Value.(string)
+								currentBounty.Description = h.Value.(string)
 							case "tagline":
-								currentBounty.Tagline[versionNumber] = h.Value.(string)
+								currentBounty.Tagline = h.Value.(string)
 								// Add other cases for additional attributes as needed
 							}
 						} else {
@@ -806,28 +834,15 @@ func GetBounties(scid string) {
 								} */
 
 								// Try to convert to int
-								expiryInt, ok := h.Value.(int)
-								if !ok {
-									// If it's not an int, try to convert to float64
-									expiryFloat, ok := h.Value.(float64)
-									if !ok {
-										logger.Println("Failed to convert expiry to int or float64")
-										continue
-									}
-									// Convert float64 to int64
-									expiryInt = int(expiryFloat)
-								}
+								expiry := h.Value.(uint64)
 
 								// Create time.Unix object for Expiry
-								currentBounty.Expiry = time.Unix(int64(expiryInt), 0)
+								currentBounty.Expiry = expiry
 
 							case "T":
 								logger.Printf("AMOUNT: %v (type: %T)", h.Value, h.Value)
-								amount, err := strconv.ParseFloat(fmt.Sprintf("%v", h.Value), 64)
-								if err != nil {
-									logger.Println("Failed to convert amount to float64:", err)
-									continue
-								}
+								amount := h.Value.(uint64)
+
 								/* 	if currentBounty == nil {
 									currentBounty = &Bounty{
 										Name:        make(map[int]string),
@@ -907,35 +922,34 @@ func getIsland(w http.ResponseWriter, r *http.Request) {
 }
 
 func getName(scid string) Name {
-	info := menu.Gnomes.GetAllSCIDVariableDetails(registry_scid)
-	if info != nil {
-		keys := make([]int, len(info))
-		i := 0
-		for k := range info {
-			keys[i] = int(k)
-			i++
-		}
-		if len(keys) == 0 {
-			fmt.Println("[getName] No stored heights")
-			return Name{}
-		}
-		var Name Name = Name{}
-		for _, h := range info[int64(keys[len(keys)-1])] {
-			if keyStr, ok := h.Key.(string); ok {
-				if keyStr == "N::PRIVATE-ISLANDS::"+scid {
-					Name.Name = h.Value.(string)
-					Name.SCID = scid
-					break
-				}
-
-			}
-		}
-		return Name
+	var Name Name = Name{}
+	name, err := menu.Gnomes.GetSCIDValuesByKey(registry_scid, "N::PRIVATE-ISLANDS::"+scid)
+	if err != nil {
+		// Handle the error if there is an issue retrieving the values
+		log.Fatal(err)
 	}
-	return Name{}
+
+	if len(name) > 0 {
+		Name.Name = name[0]
+		Name.SCID = scid
+	}
+
+	return Name
+}
+
+func getJudge(index int, scid string) Judge {
+	Judge := Judge{}
+	name := getName(scid)
+	Judge.Name = name.Name
+	Judge.SCID = name.SCID
+	Judge.Index = index
+
+	return Judge
+
 }
 
 func RemoveDuplicateBounties(input []Bounty) []Bounty {
+	fmt.Println("remove duplicate bounties")
 	seen := make(map[string]struct{})
 	result := []Bounty{}
 
@@ -972,9 +986,12 @@ func getJudging(scid string) []Bounty {
 					if valueStr == scid {
 						fmt.Println("found ", keyStr, valueStr)
 						parts := strings.Split(keyStr, "_")
+						fmt.Println("parts", parts)
 
 						var index, _ = strconv.Atoi(parts[0][64:])
+						fmt.Println("index", index)
 						currentBounty := GetBounty(parts[0][:64], index)
+						fmt.Println("currentBounty", currentBounty)
 						Bounties = append(Bounties, currentBounty)
 
 					}
@@ -992,18 +1009,40 @@ func getJudging(scid string) []Bounty {
 
 func GetIsland(scid string) Island {
 	info := menu.Gnomes.GetAllSCIDVariableDetails(scid)
+	fmt.Println("info", info)
+	var Island Island = Island{}
 	if info != nil {
 		keys := make([]int, len(info))
 		i := 0
+		fmt.Println("unsorted keys", keys)
+
 		for k := range info {
 			keys[i] = int(k)
 			i++
+			fmt.Println("keys added", i, keys)
 		}
+		sort.Ints(keys)
+		fmt.Println("sorted keys", keys)
 		if len(keys) == 0 {
 			fmt.Println("[GetAllVars] No stored heights")
-			return Island{}
+			return Island
 		}
-		var Island Island = Island{}
+		for _, k := range keys {
+			fmt.Println("k!!", k)
+			for _, h := range info[int64(k)] {
+
+				if keyStr, ok := h.Key.(string); ok {
+					if keyStr == "C" {
+						fmt.Println(keyStr)
+					} else {
+						hist := History{Attribute: keyStr, Value: h.Value.(string), Height: k}
+						fmt.Println("hist", hist)
+						Island.History = append(Island.History, hist)
+					}
+
+				}
+			}
+		}
 
 		Image, err := menu.Gnomes.GetSCIDValuesByKey(scid, "image")
 		if err != nil {
@@ -1038,7 +1077,7 @@ func GetIsland(scid string) Island {
 			fmt.Println(i)
 			nextBounty := GetBounty(scid, i)
 
-			if nextBounty.Name[0] != "" {
+			if nextBounty.Name != "" {
 				Bounties = append(Bounties, nextBounty)
 				//fmt.Println("bounties now")
 				//fmt.Println(Bounties)
@@ -1087,7 +1126,7 @@ func GetIsland(scid string) Island {
 		return Island
 
 	} else {
-		return Island{}
+		return Island
 	}
 
 }
@@ -1182,13 +1221,13 @@ func RegisterIsland(scid string, name string, wallet string) {
 	}
 
 	t := []dero.Transfer{t1}
-	fee := rpc.GasEstimate(registry_scid, "[Register]", args, t, rpc.LowLimitFee)
+	//fee := rpc.GasEstimate(registry_scid, "[Register]", args, t, rpc.LowLimitFee)
 	params := &dero.Transfer_Params{
 		Transfers: t,
 		SC_ID:     registry_scid,
 		SC_RPC:    args,
 		Ringsize:  2,
-		Fees:      fee,
+		//Fees:      fee,
 	}
 
 	if err := rpcClientW.CallFor(ctx, &txid, "transfer", params); err != nil {
@@ -1196,4 +1235,27 @@ func RegisterIsland(scid string, name string, wallet string) {
 		return
 	}
 
+}
+
+func getContracts(w http.ResponseWriter, r *http.Request) {
+	// Extract the "i" value from the URL using gorilla/mux
+	contracts := map[string]string{
+		"bounties":      bounties_scid,
+		"registry":      registry_scid,
+		"subscriptions": subscriptions_scid,
+		"fundraisers":   fundraisers_scid,
+	}
+
+	// Convert the islandData to JSON
+	contractJSON, err := json.Marshal(contracts)
+	if err != nil {
+		http.Error(w, "Failed to marshal JSON", http.StatusInternalServerError)
+		return
+	}
+
+	// Set CORS headers to allow requests from any origin
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Content-Type", "application/json")
+
+	w.Write(contractJSON)
 }
