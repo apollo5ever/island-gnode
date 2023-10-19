@@ -639,6 +639,7 @@ func GetBounty(scid string, index int) Bounty {
 									Bounty.JT = JT
 								case "JF":
 									Bounty.JF = h.Value.(float64)
+
 								case "J":
 									// Process J attribute
 									Bounty.Judge = getName(h.Value.(string))
@@ -673,6 +674,7 @@ func GetBounty(scid string, index int) Bounty {
 								case "X":
 									// Process X attribute
 									Bounty.X = h.Value.(string)
+									Bounty.Executer = getName(h.Value.(string))
 								}
 							} else if strings.HasPrefix(parts[len(parts)-1], "R") {
 
@@ -727,7 +729,10 @@ func GetBounty(scid string, index int) Bounty {
 			Bounty.Judges[k].Index = k
 		} */
 
-		if time.Unix(int64(Bounty.Expiry), 0).Before(time.Now().UTC()) {
+		if Bounty.JF == 2 {
+			//SUCCESS
+			Bounty.Status = 1
+		} else if time.Unix(int64(Bounty.Expiry), 0).Before(time.Now().UTC()) {
 			// bounty is expired
 			if Bounty.JF == 1 {
 				//expired & released
