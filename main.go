@@ -180,7 +180,7 @@ func main() {
 			time.Sleep(30 * time.Second)
 			bounties_scid = InstallContract(bountiesCode, "0")
 
-			registrySimBytes, err := ioutil.ReadFile("registry_sim.txt")
+			registrySimBytes, err := ioutil.ReadFile("registry.bas")
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -203,6 +203,8 @@ func main() {
 			subscriptionsCode := string(subscriptionsSimBytes)
 			time.Sleep(30 * time.Second)
 			subscriptions_scid = InstallContract(subscriptionsCode, "0")
+			time.Sleep(30 * time.Second)
+			NewCollection(registry_scid)
 
 			fmt.Println("bounty contract", bounties_scid)
 			fmt.Println("registry contract", registry_scid)
@@ -270,7 +272,7 @@ func main() {
 
 func GetAllVars() []Island {
 	//SCID := "a5daa9a02a81a762c83f3d4ce4592310140586badb4e988431819f47657559f7"
-	pattern := "S::PRIVATE-ISLANDS::.*"
+	pattern := "aPRIVATE-ISLANDS.*"
 	re, err := regexp.Compile(pattern)
 	if err != nil {
 		// Handle the error
@@ -956,7 +958,7 @@ func getIsland(w http.ResponseWriter, r *http.Request) {
 
 func getName(scid string) Name {
 	var Name Name = Name{}
-	name, err := menu.Gnomes.GetSCIDValuesByKey(registry_scid, "N::PRIVATE-ISLANDS::"+scid)
+	name, err := menu.Gnomes.GetSCIDValuesByKey(registry_scid, "nPRIVATE-ISLANDS"+scid)
 	if err != nil {
 		// Handle the error if there is an issue retrieving the values
 		log.Fatal(err)
@@ -1236,6 +1238,36 @@ func InstallIsland(name string, wallet string) (new_scid string) {
 
 }
 
+func NewCollection(owner string) {
+	rpcClientW, ctx, cancel := rpc.SetWalletClient("localhost:30000", "")
+	defer cancel()
+
+	arg1 := dero.Argument{Name: "entrypoint", DataType: "S", Value: "NewCollection"}
+	arg2 := dero.Argument{Name: "name", DataType: "S", Value: "PRIVATE-ISLANDS"}
+	arg3 := dero.Argument{Name: "owner", DataType: "S", Value: owner}
+	arg4 := dero.Argument{Name: "ownerType", DataType: "U", Value: 0}
+	arg5 := dero.Argument{Name: "asset1", DataType: "S", Value: ""}
+	arg6 := dero.Argument{Name: "asset2", DataType: "S", Value: ""}
+	arg7 := dero.Argument{Name: "price1", DataType: "U", Value: 0}
+	arg8 := dero.Argument{Name: "price2", DataType: "U", Value: 0}
+	arg9 := dero.Argument{Name: "return1", DataType: "U", Value: 0}
+	arg10 := dero.Argument{Name: "return2", DataType: "U", Value: 0}
+	arg11 := dero.Argument{Name: "collectionType", DataType: "U", Value: 0}
+	args := dero.Arguments{arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11}
+	txid := dero.Transfer_Result{}
+
+	params := &dero.Transfer_Params{
+		SC_ID:    registry_scid,
+		SC_RPC:   args,
+		Ringsize: 2,
+	}
+
+	if err := rpcClientW.CallFor(ctx, &txid, "transfer", params); err != nil {
+		logger.Errorln("[NewCollection]", err)
+		return
+	}
+}
+
 func RegisterIsland(scid string, name string, wallet string) {
 	rpcClientW, ctx, cancel := rpc.SetWalletClient("localhost:3000"+wallet, "")
 	defer cancel()
@@ -1244,7 +1276,8 @@ func RegisterIsland(scid string, name string, wallet string) {
 	arg2 := dero.Argument{Name: "scid", DataType: "S", Value: scid}
 	arg3 := dero.Argument{Name: "name", DataType: "S", Value: name}
 	arg4 := dero.Argument{Name: "collection", DataType: "S", Value: "PRIVATE-ISLANDS"}
-	args := dero.Arguments{arg1, arg2, arg3, arg4}
+	arg5 := dero.Argument{Name: "index", DataType: "U", Value: 0}
+	args := dero.Arguments{arg1, arg2, arg3, arg4, arg5}
 	txid := dero.Transfer_Result{}
 
 	t1 := dero.Transfer{
