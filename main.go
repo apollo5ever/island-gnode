@@ -64,23 +64,19 @@ type Judge struct {
 }
 
 type Fundraiser struct {
-	Name         map[int]string
-	Names        []string
-	Image        map[int]string
-	Images       []string
-	Description  map[int]string
-	Descriptions []string
-	Tagline      map[int]string
-	Taglines     []string
-	Goal         float64
-	Raised       float64
-	Deadline     time.Time
-	Claimed      float64
-	Index        int
-	SCID         string
-	Address      string
-	Initiator    Name
-	Status       int
+	Name        string
+	Image       string
+	Description string
+	Tagline     string
+	Goal        uint64
+	Raised      uint64
+	Expiry      uint64
+	Claimed     uint64
+	Index       int
+	SCID        string
+	Address     string
+	Initiator   Name
+	Status      int
 }
 
 type Tier struct {
@@ -422,6 +418,11 @@ func GetTier(scid string, index int) Tier {
 }
 
 func GetFundraiser(scid string, index int) Fundraiser {
+	Fundraiser := Fundraiser{
+		Index:     index,
+		SCID:      scid,
+		Initiator: getName(scid),
+	}
 	info := menu.Gnomes.GetAllSCIDVariableDetails(fundraisers_scid)
 	if info != nil {
 		keys := make([]int, len(info))
@@ -432,54 +433,82 @@ func GetFundraiser(scid string, index int) Fundraiser {
 		}
 		if len(keys) == 0 {
 			fmt.Println("[GetFundraiser] No stored heights")
-			return Fundraiser{}
+			return Fundraiser
 		}
-		key := scid + strconv.Itoa(index)
+		sort.Ints(keys)
+		/* key := scid + strconv.Itoa(index)
 		re, err := regexp.Compile(key + ".*")
 		if err != nil {
 			fmt.Println("Invalid regex pattern:", err)
-			return Fundraiser{}
+			return Fundraiser
+		} */
+
+		Image, _ := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"Image")
+
+		if len(Image) > 0 {
+			Fundraiser.Image = Image[0]
 		}
-		var Fundraiser Fundraiser = Fundraiser{
-			Name:        make(map[int]string),
-			Image:       make(map[int]string),
-			Description: make(map[int]string),
-			Tagline:     make(map[int]string),
-			Goal:        float64(0),
-			Raised:      float64(0),
-			Index:       index,
-			SCID:        scid,
-			Address:     "",
-			Initiator:   getName(scid),
+
+		Description, _ := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"Desc")
+
+		if len(Description) > 0 {
+			Fundraiser.Description = Description[0]
 		}
-		for _, h := range info[int64(keys[len(keys)-1])] {
-			if keyStr, ok := h.Key.(string); ok {
-				if re.MatchString(keyStr) {
-					parts := strings.Split(keyStr, "_")
-					if len(parts) >= 3 {
-						versionNumber, _ := strconv.Atoi(parts[len(parts)-1])
-						switch parts[len(parts)-2] {
-						case "name":
-							Fundraiser.Name[versionNumber] = h.Value.(string)
-						case "image":
-							Fundraiser.Image[versionNumber] = h.Value.(string)
-						case "desc":
-							Fundraiser.Description[versionNumber] = h.Value.(string)
-						case "tagline":
-							Fundraiser.Tagline[versionNumber] = h.Value.(string)
+
+		Tagline, _ := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"Tagline")
+
+		if len(Tagline) > 0 {
+			Fundraiser.Tagline = Tagline[0]
+		}
+		Names, _ := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"Name")
+		if len(Names) > 0 {
+			Fundraiser.Name = Names[0]
+		}
+
+		Address, _ := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"_F")
+		if len(Address) > 0 {
+			Fundraiser.Address = Address[0]
+		}
+
+		_, Expiry := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"_D")
+		if len(Expiry) > 0 {
+			Fundraiser.Expiry = Expiry[0]
+		}
+
+		_, Raised := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"_R")
+		if len(Raised) > 0 {
+			Fundraiser.Raised = Raised[0]
+		}
+
+		_, Goal := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"_G")
+		if len(Goal) > 0 {
+			Fundraiser.Goal = Goal[0]
+		}
+
+		_, Claimed := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"_C")
+		if len(Claimed) > 0 {
+			Fundraiser.Claimed = Claimed[0]
+		}
+
+		/* for _, h := range info[int64(keys[len(keys)-1])] {
+		if keyStr, ok := h.Key.(string); ok {
+			if re.MatchString(keyStr) {
+				parts := strings.Split(keyStr, "_")
+				if len(parts) == 2 {
+
+					switch parts[1] {
+
+
+					case "F":
+						Fundraiser.Address = h.Value.(string)
+					/* case "D":
+						expiryInt, ok := h.Value.(int)
+						if !ok {
+							expiryFloat := h.Value.(float64)
+							expiryInt = int(expiryFloat)
 						}
-					} else {
-						switch parts[1] {
-						case "F":
-							Fundraiser.Address = h.Value.(string)
-						case "D":
-							expiryInt, ok := h.Value.(int)
-							if !ok {
-								expiryFloat := h.Value.(float64)
-								expiryInt = int(expiryFloat)
-							}
-							Fundraiser.Deadline = time.Unix(int64(expiryInt), 0)
-						case "G":
+						Fundraiser.Deadline = time.Unix(int64(expiryInt), 0) */
+		/* case "G":
 							amount, err := strconv.ParseFloat(fmt.Sprintf("%v", h.Value), 64)
 							if err != nil {
 								logger.Println("Failed to convert amount to float64", err)
@@ -507,18 +536,17 @@ func GetFundraiser(scid string, index int) Fundraiser {
 			} else {
 				fmt.Println("Key is not a string")
 			}
-		}
-		Fundraiser.Names = MapValuesToSlice(Fundraiser.Name)
-		Fundraiser.Images = MapValuesToSlice(Fundraiser.Image)
-		Fundraiser.Descriptions = MapValuesToSlice(Fundraiser.Description)
-		Fundraiser.Taglines = MapValuesToSlice(Fundraiser.Tagline)
+		} */
 
-		if Fundraiser.Deadline.After(time.Now().UTC()) {
+		if time.Unix(int64(Fundraiser.Expiry), 0).After(time.Now().UTC()) {
+			//active
 			Fundraiser.Status = 0
 		} else {
+			//deadline has past. failure
 			if Fundraiser.Raised < Fundraiser.Goal {
 				Fundraiser.Status = 2
 			} else {
+				//success
 				Fundraiser.Status = 1
 			}
 		}
@@ -526,7 +554,7 @@ func GetFundraiser(scid string, index int) Fundraiser {
 		return Fundraiser
 
 	} else {
-		return Fundraiser{}
+		return Fundraiser
 	}
 
 }
@@ -1097,7 +1125,7 @@ func GetIsland(scid string) Island {
 			fmt.Println(i)
 			nextFundraiser := GetFundraiser(scid, i)
 
-			if nextFundraiser.Name[0] != "" {
+			if nextFundraiser.Name != "" {
 				Fundraisers = append(Fundraisers, nextFundraiser)
 			} else {
 				break
