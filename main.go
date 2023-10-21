@@ -188,7 +188,7 @@ func main() {
 			time.Sleep(30 * time.Second)
 			registry_scid = InstallContract(registryCode, "0")
 
-			fundraisersSimBytes, err := ioutil.ReadFile("fundraisers_sim.txt")
+			fundraisersSimBytes, err := ioutil.ReadFile("fundraisers.bas")
 			if err != nil {
 				log.Fatal(err)
 			}
