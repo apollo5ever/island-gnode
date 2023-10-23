@@ -64,19 +64,24 @@ type Judge struct {
 }
 
 type Fundraiser struct {
-	Name        string
-	Image       string
-	Description string
-	Tagline     string
-	Goal        uint64
-	Raised      uint64
-	Expiry      uint64
-	Claimed     uint64
-	Index       int
-	SCID        string
-	Address     string
-	Initiator   Name
-	Status      int
+	Name           string
+	Image          string
+	Description    string
+	Tagline        string
+	Goal           uint64
+	Raised         uint64
+	Expiry         uint64
+	Claimed        uint64
+	Index          int
+	SCID           string
+	Address        string
+	Initiator      Name
+	Status         int
+	WithdrawlType  string
+	ICO            bool
+	IcoToken       string
+	IcoAmount      uint64
+	WithdrawlToken string
 }
 
 type Tier struct {
@@ -466,10 +471,10 @@ func GetFundraiser(scid string, index int) Fundraiser {
 		if len(Names) > 0 {
 			Fundraiser.Name = Names[0]
 		}
-
-		Address, _ := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"_F")
-		if len(Address) > 0 {
-			Fundraiser.Address = Address[0]
+		recipient := ""
+		recipients, _ := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"_F")
+		if len(recipients) > 0 {
+			recipient = recipients[0]
 		}
 
 		_, Expiry := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"_D")
@@ -490,6 +495,38 @@ func GetFundraiser(scid string, index int) Fundraiser {
 		_, Claimed := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"_C")
 		if len(Claimed) > 0 {
 			Fundraiser.Claimed = Claimed[0]
+		}
+
+		_, WithdrawlType := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"WithdrawlType")
+		if len(WithdrawlType) > 0 {
+			if WithdrawlType[0] == 0 {
+				Fundraiser.WithdrawlType = "address"
+				Fundraiser.Address = recipient
+			} else {
+				Fundraiser.WithdrawlType = "token"
+				Fundraiser.WithdrawlToken = recipient
+			}
+
+		}
+
+		_, ICO := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"ICO")
+		if len(ICO) > 0 {
+			if ICO[0] == 0 {
+				Fundraiser.ICO = false
+			} else {
+				Fundraiser.ICO = true
+			}
+
+		}
+
+		_, icoAmount := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"icoAmount")
+		if len(icoAmount) > 0 {
+			Fundraiser.IcoAmount = icoAmount[0]
+		}
+
+		icoToken, _ := menu.Gnomes.GetSCIDValuesByKey(fundraisers_scid, scid+strconv.Itoa(index)+"icoToken")
+		if len(icoToken) > 0 {
+			Fundraiser.IcoToken = icoToken[0]
 		}
 
 		/* for _, h := range info[int64(keys[len(keys)-1])] {

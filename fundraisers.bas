@@ -1,3 +1,10 @@
+Function Initialize() Uint64
+10 STORE("QUORUM",0)
+20 STORE("CEO",HEX(SCID()))
+30 SEND_ASSET_TO_ADDRESS(SIGNER(),1,SCID())
+99 RETURN 0
+End Function
+
 Function NF(H String, i Uint64, name String, image String, tagline String, desc String, Goal Uint64, Deadline Uint64, WithdrawlType Uint64, Recipient String, ICO Uint64, icoToken String) Uint64
 10 IF ASSETVALUE(HEXDECODE(H)) != 1 THEN GOTO 100
 20 IF EXISTS(H+i+"_G") THEN GOTO 100
@@ -62,7 +69,7 @@ Function GetTokens(H String) Uint64
 10 IF BLOCK_TIMESTAMP() < LOAD(H+"_D") THEN GOTO 100
 11 IF LOAD(H+"ICO") == 0 THEN GOTO 100
 12 IF LOAD(H+"_R") < LOAD(H+"_G") THEN GOTO 100
-20 SEND_ASSET_TO_ADDRESS(SIGNER(),LOAD(H+icoAmount)*LOAD(H+ADDRESS_STRING(SIGNER())+"ICO")/LOAD(H+"_R"),HEXDECODE(LOAD(H+"icoToken")))
+20 SEND_ASSET_TO_ADDRESS(SIGNER(),LOAD(H+"icoAmount")*LOAD(H+ADDRESS_STRING(SIGNER())+"ICO")/LOAD(H+"_R"),HEXDECODE(LOAD(H+"icoToken")))
 30 STORE(H+ADDRESS_STRING(SIGNER())+"ICO",0)
 99 RETURN 0
 100 RETURN 1
