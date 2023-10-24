@@ -1,0 +1,211 @@
+Function Initialize() Uint64
+10 STORE("CEO",HEX(SCID()))
+20 SEND_ASSET_TO_ADDRESS(SIGNER(),1000000000,SCID())
+30 STORE("QUORUM",0)
+40 STORE("EPOCH-INIT",1691607914)
+70 STORE("treasuryDERO",0)
+99 RETURN 0
+End Function
+
+Function AOMT(Am Uint64, I Uint64, L Uint64, Ad String, H String, i Uint64, W Uint64, name String, image String, tagline String, desc String) Uint64
+10 IF ASSETVALUE(HEXDECODE(H)) !=1 THEN GOTO 100
+20 SetMetadata(H, i, name, image, tagline, desc)
+40 STORE(H+i+"_W",W)
+50 STORE(H+i+"_Am", Am)
+60 STORE(H+i+"_I", I)
+70 STORE(H+i+"_Ad", Ad)
+80 STORE(H+i+"_Av", L)
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function SetName(H String,i Uint64, Name String) Uint64
+10 IF ASSETVALUE(HEXDECODE(H)) != 1 THEN GOTO 100
+40 SEND_ASSET_TO_ADDRESS(SIGNER(),1,HEXDECODE(H))
+50 STORE(H+i+"Name",Name)
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function SetImage(H String,i Uint64, Image String) Uint64
+10 IF ASSETVALUE(HEXDECODE(H)) != 1 THEN GOTO 100
+40 SEND_ASSET_TO_ADDRESS(SIGNER(),1,HEXDECODE(H))
+50 STORE(H+i+"Image",Image)
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function SetTagline(H String, i Uint64, Tagline String) Uint64
+10 IF ASSETVALUE(HEXDECODE(H)) != 1 THEN GOTO 100
+40 SEND_ASSET_TO_ADDRESS(SIGNER(),1,HEXDECODE(H))
+50 STORE(H+i+"Tagline",Tagline)
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function SetDescription(H String, i Uint64, Description String) Uint64
+10 IF ASSETVALUE(HEXDECODE(H)) != 1 THEN GOTO 100
+40 SEND_ASSET_TO_ADDRESS(SIGNER(),1,HEXDECODE(H))
+50 STORE(H+i+"Desc",Description)
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function SetMetadata(H String, i Uint64, Name String, Image String, Tagline String, Description String) Uint64
+10 IF ASSETVALUE(HEXDECODE(H)) != 1 THEN GOTO 100
+40 STORE(H+i+"Image",Image)
+50 STORE(H+i+"Tagline",Tagline)
+60 STORE(H+i+"Desc",Description)
+70 STORE(H+i+"Name",Name)
+80 SEND_ASSET_TO_ADDRESS(SIGNER(),1,HEXDECODE(H))
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function EditPosts(H String, i Uint64, posts String, subs String) Uint64
+10 IF ASSETVALUE(HEXDECODE(H)) !=1 THEN GOTO 100 //PROOF OF ISLAND OWNERSHIP
+20 SEND_ASSET_TO_ADDRESS(SIGNER(),1,HEXDECODE(H)) //SEND ISLAND TOKEN BACK TO USER
+30 STORE(H+i+"::POSTS",posts) //STORE IPFS LINK TO POSTS
+40 STORE(H+i+"::SUBS",subs) //STORE IPFS LINK TO SUBSCRIBER SNAPSHOT
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function TU(S String, T String) Uint64
+10 IF EXISTS(S+"_"+T+"_E") == 0 THEN GOTO 100
+20 STORE(S+"_"+T+"_E",LOAD(S+"_"+T+"_E")+LOAD(T+"_I")*DEROVALUE()/LOAD(T+"_Am"))
+30 SEND_DERO_TO_ADDRESS(ADDRESS_RAW(LOAD(T+"_Ad")),DEROVALUE()*9/10)
+50 STORE("T_DERO",LOAD("T_DERO")+DEROVALUE()/10)
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function WL(L String, H String, T Uint64, f Uint64, F Uint64) Uint64
+10 IF ASSETVALUE(HEXDECODE(H)) != 1 THEN GOTO 100
+20 SEND_ASSET_TO_ADDRESS(SIGNER(),1,HEXDECODE(H))
+30 dim i as Uint64
+40 LET i = 0
+50 STORE(H+T+"_W_"+(f+i),SUBSTR(L,i*66,66))
+60 LET i=i+1
+70 IF i > F - f THEN GOTO 99 ELSE GOTO 40
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function AS(T String, S String) Uint64
+10 IF EXISTS(S+"_"+T+"_E") THEN GOTO 100
+11 IF DEROVALUE() < LOAD(T+"_Am") THEN GOTO 100
+12 IF EXISTS(T+"_W") THEN GOTO 14 ELSE GOTO 15
+14 IF LOAD(T+"_W") == 1 THEN GOTO 110
+15 IF LOAD(T+"_Av") == 0 THEN GOTO 100
+20 IF LOAD(T+"_Am") == 0 THEN GOTO 50
+30 STORE (S+"_"+T+"_E",BLOCK_TIMESTAMP()+LOAD(T+"_I")*DEROVALUE()/LOAD(T+"_Am"))
+35 STORE("T_DERO",LOAD("T_DERO")+DEROVALUE()/10)
+40 GOTO 70
+50 STORE (S+"_"+T+"_E", BLOCK_TIMESTAMP()+LOAD(T+"_I"))
+70 STORE (T+"_Av",LOAD(T+"_Av")-1)
+75 SEND_DERO_TO_ADDRESS(ADDRESS_RAW(LOAD(T+"_Ad")),DEROVALUE()*9/10)
+99 RETURN 0
+100 RETURN 1
+110 dim i as Uint64
+120 LET i = 0
+130 IF EXISTS(T+"_W_"+i) THEN GOTO 140 ELSE GOTO 100
+140 IF LOAD(T+"_W_"+i) == S THEN GOTO 15 ELSE GOTO 150
+150 LET i = i +1
+155 GOTO 130
+End Function
+
+Function Deposit(token String) Uint64
+1 STORE("treasury"+token,LOAD("treasury"+token)+ASSETVALUE(HEXDECODE(LOAD(token))))
+2 RETURN 0
+End Function
+
+Function Withdraw(amount Uint64, token String, special Uint64) Uint64
+1 IF ASSETVALUE(HEXDECODE(LOAD("CEO"))) != 1 THEN GOTO 99
+2 SEND_ASSET_TO_ADDRESS(SIGNER(),1,HEXDECODE(LOAD("CEO")))
+3 IF special ==1 THEN GOTO 20
+4 IF amount > LOAD("treasury"+token) THEN GOTO 99
+5 IF BLOCK_TIMESTAMP() < LOAD("allowanceRefresh"+token) THEN GOTO 8
+6 STORE("allowanceRefresh"+token,BLOCK_TIMESTAMP()+LOAD("allowanceInterval"+token))
+7 STORE("allowanceUsed"+token,0)
+8 IF amount + LOAD("allowanceUsed"+token) > LOAD("allowance"+token) THEN GOTO 99
+9 SEND_ASSET_TO_ADDRESS(SIGNER(),amount,HEXDECODE(LOAD(token)))
+10 STORE("allowanceUsed"+token,LOAD("allowanceUsed"+token)+amount)
+11 STORE("treasury"+token,LOAD("treasury"+token)-amount)
+19 RETURN 0
+20 IF LOAD("allowanceSpecial"+token) > LOAD("treasury"+token) THEN GOTO 99
+21 SEND_ASSET_TO_ADDRESS(SIGNER(),LOAD("allowanceSpecial"+token),HEXDECODE(LOAD(token)))
+22 STORE("treasury"+token,LOAD("treasury"+token)-LOAD("allowanceSpecial"+token))
+23 DELETE("allowanceSpecial"+token)
+98 RETURN 0
+99 RETURN 1
+End Function
+
+Function SS(shares Uint64) Uint64
+10 IF EXISTS(ADDRESS_STRING(SIGNER())+"_SHARES") == 0 THEN GOTO 100
+20 IF LOAD(ADDRESS_STRING(SIGNER())+"_SHARES") < shares THEN GOTO 100
+30 STORE(ADDRESS_STRING(SIGNER())+"_SHARES",LOAD(ADDRESS_STRING(SIGNER())+"_SHARES")-shares)
+40 SEND_ASSET_TO_ADDRESS(SIGNER(),shares*10000,HEXDECODE(LOAD("COCO")))
+50 STORE("T_COCO",LOAD("T_COCO")-shares*10000)
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function Propose(hash String, k String, v String, t String, seat Uint64) Uint64
+10 IF ASSETVALUE(HEXDECODE(LOAD("CEO"))) != 1 THEN GOTO 13
+11 SEND_ASSET_TO_ADDRESS(SIGNER(),1,HEXDECODE(LOAD("CEO")))
+12 GOTO 15
+13 IF ASSETVALUE(HEXDECODE(LOAD("seat"+seat))) !=1 THEN GOTO 100
+14 SEND_ASSET_TO_ADDRESS(SIGNER(),1,HEXDECODE(LOAD("seat"+seat)))
+15 STORE("APPROVE", 0)
+20 IF hash =="" THEN GOTO 40
+25 STORE("HASH",hash)
+30 STORE("k","")
+35 RETURN 0
+40 STORE("k",k)
+45 STORE("HASH","")
+49 STORE("t",t)
+80 STORE("v",v)
+90 RETURN 0
+100 RETURN 1
+End Function
+
+Function Approve(seat Uint64) Uint64
+10 IF ASSETVALUE(HEXDECODE(LOAD("seat"+seat)))!=1 THEN GOTO 100
+20 STORE("APPROVE",LOAD("APPROVE")+1)
+30 STORE("trustee"+seat,ADDRESS_STRING(SIGNER()))
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function ClaimSeat(seat Uint64) Uint64
+10 IF ADDRESS_STRING(SIGNER())!= LOAD("trustee"+seat) THEN GOTO 100
+20 SEND_ASSET_TO_ADDRESS(SIGNER(),1,HEXDECODE(LOAD("seat"+seat)))
+30 IF LOAD("APPROVE") == 0 THEN GOTO 99
+40 STORE("APPROVE",LOAD("APPROVE")-1)
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function Update(code String) Uint64
+10 IF ASSETVALUE(HEXDECODE(LOAD("CEO")))!=1 THEN GOTO 100
+15 SEND_ASSET_TO_ADDRESS(SIGNER(),1,HEXDECODE(LOAD("CEO")))
+20 IF SHA256(code) != HEXDECODE(LOAD("HASH")) THEN GOTO 100
+30 IF LOAD("APPROVE") < LOAD("QUORUM") THEN GOTO 100
+40 UPDATE_SC_CODE(code)
+99 RETURN 0
+100 RETURN 1
+End Function
+
+Function Store() Uint64
+10 IF LOAD("APPROVE") < LOAD("QUORUM") THEN GOTO 100
+20 STORE("APPROVE",0)
+30 IF LOAD("t") == "U" THEN GOTO 60
+40 STORE(LOAD("k"), LOAD("v"))
+45 STORE("k","")
+50 RETURN 0
+60 STORE(LOAD("k"),ATOI(LOAD("v")))
+65 STORE("k","")
+99 RETURN 0
+100 RETURN 1
+End Function

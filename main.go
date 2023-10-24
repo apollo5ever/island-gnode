@@ -133,7 +133,7 @@ var registry_scid = "f8a81d0e5c5f9df1f9e41b186f77d1ddbd4daab4e25a380ddde44d66c04
 
 var bounties_scid = "fc2a6923124a07f33c859f201a57159663f087e2f4b163eaa55b0f09bf6de89f"
 var fundraisers_scid = "d6ad66e39c99520d4ed42defa4643da2d99f297a506d3ddb6c2aaefbe011f3dc"
-var subscriptions_scid = "a4943b10767d3b4b28a0c39fe75303b593b2a8609b07394c803fca1a877716cc"
+var subscriptions_scid = "ce99dae86c4172378e53be91b4bb2d99f057c1eb24400510621af6002b2b10e3"
 
 // Log output
 var logger = structures.Logger.WithFields(logrus.Fields{})
