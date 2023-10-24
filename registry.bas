@@ -14,7 +14,7 @@ Function NewCollection(name String, owner String, ownerType Uint64, asset1 Strin
 11 IF LOAD("c"+name+"OwnerType") == 0 && ASSETVALUE(HEXDECODE(LOAD("c"+name+"Owner"))) ! = 1 THEN GOTO 100
 12 SEND_ASSET_TO_ADDRESS(SIGNER(),ASSETVALUE(HEXDECODE(LOAD("c"+name+"Owner"))),HEXDECODE(LOAD("c"+name+"Owner")))
 13 IF LOAD("c"+name+"OwnerType") == 1 && ADDRESS_STRING(SIGNER()) != LOAD("c"+name+"Owner") THEN GOTO 100
-14 GOTO 16
+14 GOTO 20
 15 IF DEROVALUE() ! = LOAD("newCollectionFee") THEN GOTO 100
 16 smrtStore("treasury0000000000000000000000000000000000000000000000000000000000000000",DEROVALUE())
 20 STORE("c"+name+"Owner",owner)
@@ -25,10 +25,6 @@ Function NewCollection(name String, owner String, ownerType Uint64, asset1 Strin
 70 STORE("c"+name+"Price2",price2)
 80 STORE("c"+name+"Return1",return1)
 90 STORE("c"+name+"Return2",return2)
-91 smrtStore("c"+name+"Treasury"+asset1,0)
-92 smrtStore("c"+name+"Treasury"+asset2,0)
-93 smrtStore("treasury"+asset1,0)
-94 smrtStore("treasury"+asset2,0)
 95 STORE("c"+name+"Type",collectionType)
 99 RETURN 0
 100 RETURN 1
@@ -39,37 +35,11 @@ Function smrtStore(key String, value Uint64) Uint64
 11 RETURN STORE(key,value)
 20 RETURN STORE(key,LOAD(key) + value)
 End Function
-/*COLLECTION TYPES: 
-0 ASSET ONLY
-1 ADDRESS ONLY
-2 BOTH
-3 IMMUTABLE ASSET ONLY
-4 IMMUTABLE ADDRESS ONLY
-5 IMMUTABLE BOTH
-6 ASSET ONLY MULTI-NAME
-7 ADDRESS ONLY MULTI
-8 BOTH MULTI
-
-12 POSSIBLITIES 0 - B IN HEX  1,2,3,4,5,6,7,8,9,10,11,12
-
-1   0  A
-2   1  D
-3   2  B
-4   3  AI
-5   4  DI
-6   5  BI
-7   6  AM
-8   7  DM
-9   8  BM
-10  9  AIM
-11  11 DIM
-12  12 BIM
-
-RULE: 0%3 = NO ADDRESSES
-      1%3  = NO ASSETS
-      <6 - NO MULTI
-      <3 (MOD 6) IMMUTABLE
-
+/*
+ 0%3 = NO ADDRESSES
+1%3  = NO ASSETS
+<6 - NO MULTI
+<3 (MOD 6) IMMUTABLE
 */
 Function handleDel(collection String, scid String,T String) Uint64
 10 IF EXISTS("n"+collection+scid) == 0 THEN GOTO 20
@@ -118,8 +88,8 @@ Function handleToken(collection String, token String, refund Uint64, price Uint6
 2 LET amount = ASSETVALUE(HEXDECODE(token))
 3 IF amount != price THEN GOTO 100
 10 IF refund THEN GOTO 20
-15 STORE("c"+collection+"Treasury"+token,LOAD("c"+collection+"Treasury"+token)+MAX(1,amount*9/10))
-16 STORE("treasury"+token,LOAD("treasury"+token)+amount/10)
+15 smrtStore("c"+collection+"Treasury"+token,MAX(1,amount*9/10))
+16 smrtStore("treasury"+token,amount/10)
 17 RETURN 0
 20 SEND_ASSET_TO_ADDRESS(SIGNER(),amount,HEXDECODE(token))
 21 RETURN 0

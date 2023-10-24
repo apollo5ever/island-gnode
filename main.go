@@ -85,21 +85,18 @@ type Fundraiser struct {
 }
 
 type Tier struct {
-	Name         map[int]string
-	Names        []string
-	Image        map[int]string
-	Images       []string
-	Description  map[int]string
-	Descriptions []string
-	Tagline      map[int]string
-	Taglines     []string
-	Amount       float64
-	Interval     float64
-	Available    float64
-	Address      string
-	Index        int
-	SCID         string
-	Subscribers  []string
+	Name        string
+	Image       string
+	Description string
+	Tagline     string
+	Amount      float64
+	Interval    float64
+	Available   float64
+	Address     string
+	Index       int
+	SCID        string
+	Subscribers []string
+	Initiator   Name
 }
 
 type Name struct {
@@ -132,7 +129,7 @@ type History struct {
 const app_tag = "island_gnode"
 
 // contracts
-var registry_scid = "a5daa9a02a81a762c83f3d4ce4592310140586badb4e988431819f47657559f7"
+var registry_scid = "f8a81d0e5c5f9df1f9e41b186f77d1ddbd4daab4e25a380ddde44d66c040da8f"
 
 var bounties_scid = "fc2a6923124a07f33c859f201a57159663f087e2f4b163eaa55b0f09bf6de89f"
 var fundraisers_scid = "d6ad66e39c99520d4ed42defa4643da2d99f297a506d3ddb6c2aaefbe011f3dc"
@@ -325,6 +322,11 @@ func GetAllVars() []Island {
 }
 
 func GetTier(scid string, index int) Tier {
+	Tier := Tier{
+		Index:     index,
+		SCID:      scid,
+		Initiator: getName(scid),
+	}
 	info := menu.Gnomes.GetAllSCIDVariableDetails(subscriptions_scid)
 	if info != nil {
 		keys := make([]int, len(info))
@@ -335,41 +337,47 @@ func GetTier(scid string, index int) Tier {
 		}
 		if len(keys) == 0 {
 			fmt.Println("[GetAllVars] No stored heights")
-			return Tier{}
+			return Tier
 		}
+		sort.Ints(keys)
+
 		key := scid + strconv.Itoa(index)
 		re, err := regexp.Compile(key + ".*")
 		if err != nil {
 			fmt.Println("Invalid regex pattern:", err)
-			return Tier{}
+			return Tier
 		}
-		var Tier Tier = Tier{
-			Name:        make(map[int]string),
-			Image:       make(map[int]string),
-			Description: make(map[int]string),
-			Tagline:     make(map[int]string),
-			Amount:      float64(0),
-			Interval:    float64(0),
-			Available:   float64(0),
-			Index:       index,
-			SCID:        scid,
-			Subscribers: make([]string, 0),
+
+		Image, _ := menu.Gnomes.GetSCIDValuesByKey(subscriptions_scid, scid+strconv.Itoa(index)+"Image")
+
+		if len(Image) > 0 {
+			Tier.Image = Image[0]
 		}
+
+		Description, _ := menu.Gnomes.GetSCIDValuesByKey(subscriptions_scid, scid+strconv.Itoa(index)+"Desc")
+
+		if len(Description) > 0 {
+			Tier.Description = Description[0]
+		}
+
+		Tagline, _ := menu.Gnomes.GetSCIDValuesByKey(subscriptions_scid, scid+strconv.Itoa(index)+"Tagline")
+
+		if len(Tagline) > 0 {
+			Tier.Tagline = Tagline[0]
+		}
+		Names, _ := menu.Gnomes.GetSCIDValuesByKey(subscriptions_scid, scid+strconv.Itoa(index)+"Name")
+		if len(Names) > 0 {
+			Tier.Name = Names[0]
+		}
+
 		for _, h := range info[int64(keys[len(keys)-1])] {
 			if keyStr, ok := h.Key.(string); ok {
 				if re.MatchString(keyStr) {
 					parts := strings.Split(keyStr, "_")
 					if len(parts) >= 3 {
-						versionNumber, _ := strconv.Atoi(parts[len(parts)-1])
+
 						switch parts[len(parts)-2] {
-						case "name":
-							Tier.Name[versionNumber] = h.Value.(string)
-						case "image":
-							Tier.Image[versionNumber] = h.Value.(string)
-						case "desc":
-							Tier.Description[versionNumber] = h.Value.(string)
-						case "tagline":
-							Tier.Tagline[versionNumber] = h.Value.(string)
+
 						default:
 							fmt.Println("TIER TIME DEFAULT PARTY: ??", parts)
 							if strings.HasPrefix(parts[0], "dero") {
@@ -377,7 +385,7 @@ func GetTier(scid string, index int) Tier {
 								Tier.Subscribers = append(Tier.Subscribers, parts[0])
 							}
 						}
-					} else {
+					} else if len(parts) == 2 {
 						switch parts[1] {
 						case "Ad":
 							address := h.Value.(string)
@@ -411,15 +419,11 @@ func GetTier(scid string, index int) Tier {
 				fmt.Println("Key is not a string")
 			}
 		}
-		Tier.Names = MapValuesToSlice(Tier.Name)
-		Tier.Images = MapValuesToSlice(Tier.Image)
-		Tier.Descriptions = MapValuesToSlice(Tier.Description)
-		Tier.Taglines = MapValuesToSlice(Tier.Tagline)
 
 		return Tier
 
 	} else {
-		return Tier{}
+		return Tier
 	}
 
 }
@@ -1178,7 +1182,7 @@ func GetIsland(scid string) Island {
 			fmt.Println(i)
 			nextTier := GetTier(scid, i)
 
-			if nextTier.Name[0] != "" {
+			if nextTier.Name != "" {
 				Tiers = append(Tiers, nextTier)
 			} else {
 				break
