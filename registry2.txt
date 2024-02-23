@@ -1,0 +1,132 @@
+I am designing the Dero Web. A network of assets and addresses. 
+Collections have members.
+Members can be addresses or assets.
+Members are registred to one or more name.
+
+If you control an address, you can fix data to it in the contract and you can modify that data freely
+or I guess there can still be controls for collections but just no name reservation here. name will be dictated by built-in names
+that's what I think
+
+deroID
+a new asset standard which is mutable, and serves to store data like image, url, description, urls, etc
+
+deroID assets are registered as named members in collections
+
+deroWeb contract stores names and reputations
+
+reputations are tied to assets and addresses not names
+
+names can be transferred from asset to asset but reputation stays with asset
+
+
+ex: address["arbitrary string"], [arbitrary data]
+
+STORE(c+ADDRESS_STRING(SIGNER())+"["+key+"]",v)
+
+If a name is available and you have the necessary token(s) to reserve it then you can 
+
+STORE(c+"m"+name+".asset",scid)
+STORE(c+"m"+name+".address",address)
+STORE(c+"m"+name+".CEO",scid)
+newBoard(board)
+STORE(c+"m"+name+".expiry",datestamp)
+
+
+
+
+collection = {
+	name
+	description
+	
+	
+collection is an asset too??????????????? or has a profile asset??????
+
+
+collection:
+	{
+	c0.identy: asset with metadata
+	c0.rules: uint64
+	c0.powers:
+		[ceo,ceo,nobody,asset,everybody]
+	c0.ceo (withdraw,appoint modify,appoint birther)
+	c0.seat0
+	c0.seat1
+	c0.birther
+	c0.modify
+	c0.delete
+	
+	c0.quorum.allowance
+	c0.quorum.birth
+	c0.quorum.modify
+	c0.quorum.delete
+	
+	c0.sub0.identity
+	c0.sub0.rules
+	....
+	
+	c0.o"string".name, "apollo"
+	c0.o"name".string, scid/address/??
+	
+	
+	
+	
+	RESERVERO
+	
+c2.id: scid of oao asset with reservero metadta
+?? c2.name,"RESERVERO"
+nRESERVERO,2
+c2.rules: 1 asset = 1 name; mutable name; assets only; $500 annual fee; 
+c2.ceo: token
+c2.seat...
+c2.birther: ceo
+c2.modify: ceo
+c2.delete: ceo
+c2.q.allowance: 3/5
+c2.q.birth: 0/5
+c2.q.modify: 0/5
+c2.q.delete: 4/5
+	c2.o"asset scid".name,"apollo"
+	c2.oapollo.token, scid
+	c2.oapollo.address, address
+	c2.oapollo.expiry, datestamp
+	c2.o[scid].score, 99
+	c2.o[scid].r[scid/address], 50
+	c2.o[scid].r[scid/address],100
+	c2.o[scid].c[scid/address],"great guy"
+	c2.o[scid].c[scid/address],"poop guy"
+	c2.o[scid].s0.id, asset
+	
+r.scid,99
+
+
+what would it mean to add an asset to an asset
+like awarding a diploma to a deroID
+
+
+
+
+BETTER TO HAVE 1 CONTRACT = 1 COLLECTION?
+
+deroID
+a contract standard designed for asset id
+
+deroTrust
+	a contract that allows assets and addresses to rate each other
+	say A trusts B and B trusts C 
+	A can decide to filter by who he trusts, or who he trusts plus who they trust, or not to filter at all 
+	
+
+reservero
+a contract that lists deroIDs offering reservation services
+
+descrow
+a contract that lists deroIDs offering escrow services (can also function as PI judges)
+
+.dero
+a contract that lets users store anything with their address. dero web extension reads. apollo.dero finds my address then associated url from this contract
+this can be immutable and ownerless and free
+
+.dns
+a contract that lets users register assets to names. dero web extension reads this. apollo.dns finds my asset and associated url. a name can have a built-in oao structure in the .dns contract
+
+

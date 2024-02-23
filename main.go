@@ -19,10 +19,12 @@ import (
 	"github.com/civilware/Gnomon/structures"
 	"github.com/dReam-dApps/dReams/menu"
 	"github.com/dReam-dApps/dReams/rpc"
-	"github.com/deroproject/derohe/cryptography/crypto"
+
 	dero "github.com/deroproject/derohe/rpc"
 	"github.com/sirupsen/logrus"
 )
+
+//"github.com/deroproject/derohe/cryptography/crypto"
 
 var devMode bool
 
@@ -1294,7 +1296,8 @@ func NewCollection(owner string) {
 	arg9 := dero.Argument{Name: "return1", DataType: "U", Value: 0}
 	arg10 := dero.Argument{Name: "return2", DataType: "U", Value: 0}
 	arg11 := dero.Argument{Name: "collectionType", DataType: "U", Value: 0}
-	args := dero.Arguments{arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11}
+	arg12 := dero.Argument{Name: "twoToken", DataType: "U", Value: 0}
+	args := dero.Arguments{arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12}
 	txid := dero.Transfer_Result{}
 
 	params := &dero.Transfer_Params{
@@ -1312,7 +1315,7 @@ func NewCollection(owner string) {
 func RegisterIsland(scid string, name string, wallet string) {
 	rpcClientW, ctx, cancel := rpc.SetWalletClient("localhost:3000"+wallet, "")
 	defer cancel()
-
+	//missing args now
 	arg1 := dero.Argument{Name: "entrypoint", DataType: "S", Value: "RegisterAsset"}
 	arg2 := dero.Argument{Name: "scid", DataType: "S", Value: scid}
 	arg3 := dero.Argument{Name: "name", DataType: "S", Value: name}
@@ -1321,19 +1324,19 @@ func RegisterIsland(scid string, name string, wallet string) {
 	args := dero.Arguments{arg1, arg2, arg3, arg4, arg5}
 	txid := dero.Transfer_Result{}
 
-	t1 := dero.Transfer{
-		SCID:   crypto.HashHexToHash(scid),
-		Amount: 0,
-		Burn:   1,
-	}
+	//t1 := dero.Transfer{
+	//	SCID:   crypto.HashHexToHash(scid),
+	//	Amount: 0,
+	//	Burn:   1,
+	//	}
 
-	t := []dero.Transfer{t1}
+	//t := []dero.Transfer{t1}
 	//fee := rpc.GasEstimate(registry_scid, "[Register]", args, t, rpc.LowLimitFee)
 	params := &dero.Transfer_Params{
-		Transfers: t,
-		SC_ID:     registry_scid,
-		SC_RPC:    args,
-		Ringsize:  2,
+		//Transfers: t,
+		SC_ID:    registry_scid,
+		SC_RPC:   args,
+		Ringsize: 2,
 		//Fees:      fee,
 	}
 
