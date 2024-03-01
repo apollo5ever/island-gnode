@@ -120,7 +120,7 @@ End Function
 
 Function WFF(H String, i Uint64) Uint64
 10 IF EXISTS(H+i+"_D") == 0 THEN GOTO 100
-15 IF LOAD(H+i+"withdrawlType") == 1 THEN GOTO 100
+15 IF LOAD(H+i+"WithdrawlType") == 1 THEN GOTO 100
 20 IF LOAD(H+i+"_D") > BLOCK_TIMESTAMP() THEN GOTO 65
 30 IF LOAD(H+i+"_R") >= LOAD(H+i+"_G") THEN GOTO 70
 40 IF EXISTS(H+i+ADDRESS_STRING(SIGNER())) == 0 THEN GOTO 100 
